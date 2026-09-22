@@ -86,12 +86,16 @@ export interface Member {
   trainer_name?: string | null;
   status: "active" | "inactive";
   membership_plan_name?: string | null;
+  membership_start_date?: string | null;
   membership_end_date?: string | null;
   membership_status?: string | null;
   lifetime_value?: number;
   total_payments?: number;
+  average_payment?: number;
   last_payment_date?: string | null;
   renewal_count?: number;
+  is_at_risk?: boolean;
+  risk_reason?: string | null;
   created_at: string;
 }
 
@@ -107,8 +111,10 @@ export interface MembershipPlan {
   id: string;
   gym_id: string;
   name: string;
+  description?: string | null;
   price: number;
   duration_days: number;
+  status?: string;
   created_at: string;
 }
 
@@ -167,14 +173,18 @@ export interface Trainer {
   email: string;
   phone?: string | null;
   specialty: string;
+  specialization?: string;
   years_of_experience: number;
+  experience_years?: number;
   certification?: string | null;
   certification_level?: string | null;
   joining_date?: string | null;
   employment_type: string;
   status: "active" | "inactive";
   max_client_capacity: number;
-  rating: number;
+  bio?: string | null;
+  rating?: number | null;
+  review_count?: number;
   assigned_clients_count?: number;
   client_load_percent?: number;
   revenue_generated?: number;
@@ -185,6 +195,42 @@ export interface Trainer {
 export interface TrainerListResponse {
   items: Trainer[];
   total: number;
+}
+
+export interface TrainerClientItem {
+  id: string;
+  member_id: string;
+  name: string;
+  email: string;
+  phone: string;
+  age?: number | null;
+  gender?: string | null;
+  membership_plan_name?: string | null;
+  membership_status?: string | null;
+  membership_end_date?: string | null;
+  assigned_at: string;
+  status: string;
+}
+
+export interface TrainerClientListResponse {
+  items: TrainerClientItem[];
+  total: number;
+}
+
+export interface TrainerReview {
+  id: string;
+  trainer_id: string;
+  member_id: string;
+  member_name?: string | null;
+  rating: number;
+  review?: string | null;
+  created_at: string;
+}
+
+export interface TrainerReviewListResponse {
+  items: TrainerReview[];
+  total: number;
+  average_rating?: number | null;
 }
 
 // ============================================================
@@ -309,7 +355,9 @@ export interface TrainerPerformanceItem {
   name: string;
   specialty: string;
   status: string;
-  rating: number;
+  rating?: number | null;
+  review_count?: number;
+  experience_years?: number;
   assigned_members: number;
   max_capacity: number;
   utilization_percent: number;
@@ -321,6 +369,8 @@ export interface TrainerIntelligenceResponse {
   total_trainers: number;
   active_trainers: number;
   avg_members_per_trainer: number;
+  avg_trainer_experience?: number | null;
+  avg_trainer_rating?: number | null;
   overall_utilization_percent: number;
   trainers: TrainerPerformanceItem[];
   specialization_distribution: Array<{ specialty: string; count: number }>;

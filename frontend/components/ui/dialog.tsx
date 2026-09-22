@@ -6,20 +6,21 @@ interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
+  className?: string;
 }
 
-export function Dialog({ open, onOpenChange, children }: DialogProps) {
+export function Dialog({ open, onOpenChange, children, className }: DialogProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
         onClick={() => onOpenChange(false)}
       />
       {/* Content Container */}
-      <div className="relative z-50 w-full max-w-lg p-4">{children}</div>
+      <div className={cn("relative z-50 w-full max-w-lg", className)}>{children}</div>
     </div>
   );
 }

@@ -79,12 +79,16 @@ class MemberResponse(BaseModel):
     trainer_name: Optional[str] = None
     status: str
     membership_plan_name: Optional[str] = None
+    membership_start_date: Optional[date] = None
     membership_end_date: Optional[date] = None
     membership_status: Optional[str] = None
     lifetime_value: float = 0.0
     total_payments: int = 0
+    average_payment: float = 0.0
     last_payment_date: Optional[date] = None
     renewal_count: int = 0
+    is_at_risk: bool = False
+    risk_reason: Optional[str] = None
     created_at: datetime
 
 

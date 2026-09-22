@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from app.models.membership import Membership
     from app.models.payment import Payment
     from app.models.trainer import Trainer
+    from app.models.trainer_assignment import TrainerMemberAssignment
 
 
 class Member(Base, UUIDMixin, TimestampMixin):
@@ -49,6 +50,7 @@ class Member(Base, UUIDMixin, TimestampMixin):
     # Relationships
     gym: Mapped["Gym"] = relationship("Gym", back_populates="members")
     trainer: Mapped[Optional["Trainer"]] = relationship("Trainer", back_populates="members")
+    trainer_assignments: Mapped[List["TrainerMemberAssignment"]] = relationship("TrainerMemberAssignment", back_populates="member", cascade="all, delete-orphan")
     memberships: Mapped[List["Membership"]] = relationship("Membership", back_populates="member", cascade="all, delete-orphan")
     payments: Mapped[List["Payment"]] = relationship("Payment", back_populates="member", cascade="all, delete-orphan")
 

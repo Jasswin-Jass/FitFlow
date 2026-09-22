@@ -15,6 +15,8 @@ from app.models.gym import Gym
 from app.models.user import User
 from app.models.member import Member
 from app.models.trainer import Trainer
+from app.models.trainer_assignment import TrainerMemberAssignment
+from app.models.trainer_review import TrainerReview
 from app.models.membership_plan import MembershipPlan
 from app.models.membership import Membership
 from app.models.payment import Payment
@@ -93,23 +95,23 @@ async def seed_data():
         session.add_all([owner_a, staff_a])
 
         # Plans Gym A
-        plan_a_monthly = MembershipPlan(gym_id=gym_a.id, name="Monthly Standard", price=1500.0, duration_days=30)
-        plan_a_quarterly = MembershipPlan(gym_id=gym_a.id, name="Quarterly Pro", price=4000.0, duration_days=90)
-        plan_a_annual = MembershipPlan(gym_id=gym_a.id, name="Annual Elite", price=14000.0, duration_days=365)
+        plan_a_monthly = MembershipPlan(gym_id=gym_a.id, name="Monthly Standard", description="Full facility access, billed monthly", price=1500.0, duration_days=30, status="active")
+        plan_a_quarterly = MembershipPlan(gym_id=gym_a.id, name="Quarterly Pro", description="Quarterly access with free locker and functional zone", price=4000.0, duration_days=90, status="active")
+        plan_a_annual = MembershipPlan(gym_id=gym_a.id, name="Annual Elite", description="Full year VIP access with personal trainer induction", price=14000.0, duration_days=365, status="active")
         session.add_all([plan_a_monthly, plan_a_quarterly, plan_a_annual])
         await session.flush()
         plans_a = [plan_a_monthly, plan_a_quarterly, plan_a_annual]
 
         # Trainers Gym A (5 Trainers)
         trainers_a_info = [
-            ("Vignesh Sundaram", "vignesh@fitcorefitness.com", "+91 98401 11221", "Strength & Conditioning", 7, "CSCS Certified", "Master Trainer", "Full-time", 25, 4.9),
-            ("Priya Natarajan", "priya@fitcorefitness.com", "+91 98402 22332", "CrossFit & HIIT", 5, "CrossFit Level 2", "Senior Trainer", "Full-time", 20, 4.8),
-            ("Arvind Swaminathan", "arvind@fitcorefitness.com", "+91 98403 33443", "Functional Mobility & Rehab", 4, "ACE Certified", "Trainer", "Part-time", 15, 4.7),
-            ("Kavitha Raman", "kavitha@fitcorefitness.com", "+91 98404 44554", "Yoga & Pilates", 6, "RYT 500 Yoga Alliance", "Senior Trainer", "Full-time", 20, 4.9),
-            ("Manoj Kumar", "manoj@fitcorefitness.com", "+91 98405 55665", "Bodybuilding & Hypertrophy", 8, "ISSA Certified", "Master Trainer", "Full-time", 25, 4.6),
+            ("Vignesh Sundaram", "vignesh@fitcorefitness.com", "+91 98401 11221", "Strength & Conditioning", 7, "CSCS Certified", "Master Trainer", "Full-time", 25, 4.9, "Former state weightlifter dedicated to functional strength and hypertrophy."),
+            ("Priya Natarajan", "priya@fitcorefitness.com", "+91 98402 22332", "CrossFit & HIIT", 5, "CrossFit Level 2", "Senior Trainer", "Full-time", 20, 4.8, "CrossFit specialist helping clients build speed, stamina, and agility."),
+            ("Arvind Swaminathan", "arvind@fitcorefitness.com", "+91 98403 33443", "Functional Mobility & Rehab", 4, "ACE Certified", "Trainer", "Part-time", 15, 4.7, "Physio-certified coach helping members train pain-free and fix posture."),
+            ("Kavitha Raman", "kavitha@fitcorefitness.com", "+91 98404 44554", "Yoga & Pilates", 6, "RYT 500 Yoga Alliance", "Senior Trainer", "Full-time", 20, 4.9, "Holistic wellness expert blending breathwork, core strength, and mobility."),
+            ("Manoj Kumar", "manoj@fitcorefitness.com", "+91 98405 55665", "Bodybuilding & Hypertrophy", 8, "ISSA Certified", "Master Trainer", "Full-time", 25, 4.6, "Dedicated bodybuilding coach specializing in nutrition protocols and muscle gain."),
         ]
         trainers_a = []
-        for name, email, phone, spec, exp, cert, lvl, emp, cap, rat in trainers_a_info:
+        for name, email, phone, spec, exp, cert, lvl, emp, cap, rat, bio in trainers_a_info:
             t = Trainer(
                 gym_id=gym_a.id,
                 name=name,
@@ -124,6 +126,7 @@ async def seed_data():
                 status="active",
                 max_client_capacity=cap,
                 rating=rat,
+                bio=bio,
             )
             session.add(t)
             trainers_a.append(t)
@@ -212,6 +215,43 @@ async def seed_data():
 
         await session.flush()
         print(f"Created {len(members_a)} members for Gym A.")
+
+        # Seed Trainer-Member Assignments for Gym A
+        for m in members_a:
+            if m.trainer_id:
+                assign = TrainerMemberAssignment(
+                    gym_id=gym_a.id,
+                    trainer_id=m.trainer_id,
+                    member_id=m.id,
+                    assigned_at=datetime.combine(m.join_date, datetime.min.time()).replace(tzinfo=timezone.utc),
+                    status="active",
+                )
+                session.add(assign)
+        await session.flush()
+
+        # Seed Trainer Reviews for Gym A
+        SAMPLE_REVIEWS = [
+            "Fantastic coach! Really helped improve my deadlift technique and posture.",
+            "Very motivating and attentive to form and recovery during every session.",
+            "Great workout routine, custom diet guidance really accelerated results.",
+            "Super knowledgeable and punctual. Pushes me past plateaus safely.",
+            "Clear instructions and friendly demeanor. Highly recommend for all fitness levels.",
+            "Focuses on functional movements and injury prevention. Excellent trainer.",
+        ]
+        for t in trainers_a:
+            t_mems = [m for m in members_a if m.trainer_id == t.id]
+            sample_mems = t_mems[:min(len(t_mems), random.randint(3, 5))]
+            for sm in sample_mems:
+                rev = TrainerReview(
+                    gym_id=gym_a.id,
+                    trainer_id=t.id,
+                    member_id=sm.id,
+                    rating=random.choice([4, 5, 5, 5, 4, 5]),
+                    review=random.choice(SAMPLE_REVIEWS),
+                    created_at=datetime.now(timezone.utc) - timedelta(days=random.randint(2, 45)),
+                )
+                session.add(rev)
+        await session.flush()
 
         # Create Memberships and Payments for Gym A
         # ~52 active members, ~15 expired/churned, ~8 expiring within 7 days (at-risk)
@@ -413,21 +453,21 @@ async def seed_data():
         session.add_all([owner_b, staff_b])
 
         # Plans Gym B
-        plan_b_monthly = MembershipPlan(gym_id=gym_b.id, name="Power Monthly", price=1800.0, duration_days=30)
-        plan_b_quarterly = MembershipPlan(gym_id=gym_b.id, name="Strength 3-Month", price=4800.0, duration_days=90)
-        plan_b_annual = MembershipPlan(gym_id=gym_b.id, name="Titan Annual", price=16500.0, duration_days=365)
+        plan_b_monthly = MembershipPlan(gym_id=gym_b.id, name="Power Monthly", description="All equipment access with flexible monthly billing", price=1800.0, duration_days=30, status="active")
+        plan_b_quarterly = MembershipPlan(gym_id=gym_b.id, name="Strength 3-Month", description="Targeted strength cycles with functional coaching", price=4800.0, duration_days=90, status="active")
+        plan_b_annual = MembershipPlan(gym_id=gym_b.id, name="Titan Annual", description="Complete athlete package with sauna and premium access", price=16500.0, duration_days=365, status="active")
         session.add_all([plan_b_monthly, plan_b_quarterly, plan_b_annual])
         await session.flush()
         plans_b = [plan_b_monthly, plan_b_quarterly, plan_b_annual]
 
         # Trainers Gym B (3 Trainers)
         trainers_b_info = [
-            ("Ranjith Naidu", "ranjith@urbanstrength.in", "+91 94431 11221", "Powerlifting & Barbell", 6, "IPF Coach", "Senior Coach", "Full-time", 20, 4.8),
-            ("Divya Sridhar", "divya@urbanstrength.in", "+91 94432 22332", "Athletic Conditioning", 4, "ACE Certified", "Coach", "Full-time", 18, 4.7),
-            ("Siddharth Chettiar", "siddharth@urbanstrength.in", "+91 94433 33443", "Mobility & Calisthenics", 5, "Calisthenics Level 2", "Coach", "Part-time", 15, 4.9),
+            ("Ranjith Naidu", "ranjith@urbanstrength.in", "+91 94431 11221", "Powerlifting & Barbell", 6, "IPF Coach", "Senior Coach", "Full-time", 20, 4.8, "Competitive powerlifter coaching squat, bench, and deadlift mechanics."),
+            ("Divya Sridhar", "divya@urbanstrength.in", "+91 94432 22332", "Athletic Conditioning", 4, "ACE Certified", "Coach", "Full-time", 18, 4.7, "Specialist in high-intensity stamina, agility training, and endurance."),
+            ("Siddharth Chettiar", "siddharth@urbanstrength.in", "+91 94433 33443", "Mobility & Calisthenics", 5, "Calisthenics Level 2", "Coach", "Part-time", 15, 4.9, "Bodyweight movement master focusing on handstands, muscle-ups, and joint health."),
         ]
         trainers_b = []
-        for name, email, phone, spec, exp, cert, lvl, emp, cap, rat in trainers_b_info:
+        for name, email, phone, spec, exp, cert, lvl, emp, cap, rat, bio in trainers_b_info:
             t = Trainer(
                 gym_id=gym_b.id,
                 name=name,
@@ -442,6 +482,7 @@ async def seed_data():
                 status="active",
                 max_client_capacity=cap,
                 rating=rat,
+                bio=bio,
             )
             session.add(t)
             trainers_b.append(t)
@@ -471,17 +512,20 @@ async def seed_data():
             if r_gen < 0.60:
                 gender = "Male"
                 fname = random.choice(FIRST_NAMES_MALE)
-            else:
+            elif r_gen < 0.95:
                 gender = "Female"
                 fname = random.choice(FIRST_NAMES_FEMALE)
+            else:
+                gender = "Other"
+                fname = random.choice(FIRST_NAMES_MALE)
 
             lname = random.choice(LAST_NAMES)
             full_name = f"{fname} {lname}"
-            email_b = f"{fname.lower()}.{lname.lower()}{i+1}@urbanmember.in"
-            phone_b = f"+91 94434 {random.randint(10000, 99999)}"
-            join_dt = today - timedelta(days=random.randint(10, 180))
+            email_b = f"{fname.lower()}.{lname.lower()}{i+100}@urbanstrength.in"
+            phone_b = f"+91 9443{random.randint(100000, 999999)}"
+            join_dt = today - timedelta(days=random.randint(5, 75))
 
-            assigned_trainer = random.choice(trainers_b)
+            assigned_trainer = trainers_b[i % len(trainers_b)]
 
             m = Member(
                 gym_id=gym_b.id,
@@ -509,6 +553,35 @@ async def seed_data():
 
         await session.flush()
         print(f"Created {len(members_b)} members for Gym B.")
+
+        # Seed Trainer-Member Assignments for Gym B
+        for m in members_b:
+            if m.trainer_id:
+                assign = TrainerMemberAssignment(
+                    gym_id=gym_b.id,
+                    trainer_id=m.trainer_id,
+                    member_id=m.id,
+                    assigned_at=datetime.combine(m.join_date, datetime.min.time()).replace(tzinfo=timezone.utc),
+                    status="active",
+                )
+                session.add(assign)
+        await session.flush()
+
+        # Seed Trainer Reviews for Gym B
+        for t in trainers_b:
+            t_mems = [m for m in members_b if m.trainer_id == t.id]
+            sample_mems = t_mems[:min(len(t_mems), random.randint(2, 4))]
+            for sm in sample_mems:
+                rev = TrainerReview(
+                    gym_id=gym_b.id,
+                    trainer_id=t.id,
+                    member_id=sm.id,
+                    rating=random.choice([4, 5, 5, 4]),
+                    review=random.choice(SAMPLE_REVIEWS),
+                    created_at=datetime.now(timezone.utc) - timedelta(days=random.randint(3, 40)),
+                )
+                session.add(rev)
+        await session.flush()
 
         # Memberships & Payments for Gym B
         for idx, m in enumerate(members_b):

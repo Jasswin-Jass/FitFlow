@@ -27,6 +27,7 @@ async def _enrich_member_response(session: AsyncSession, member: Member) -> Memb
     row = res.first()
 
     plan_name = row[1].name if row else None
+    start_date = row[0].start_date if row else None
     end_date = row[0].end_date if row else None
     membership_status = row[0].status if row else None
 
@@ -43,11 +44,32 @@ async def _enrich_member_response(session: AsyncSession, member: Member) -> Memb
         .where(Payment.member_id == member.id, Payment.status == "paid")
     )
     tot_amt, tot_cnt, max_date = (await session.execute(pay_stmt)).one()
+    avg_payment = round(float(tot_amt or 0.0) / tot_cnt, 2) if tot_cnt and tot_cnt > 0 else 0.0
 
     # 4. Renewal count (memberships count - 1 if > 0)
     mship_cnt_stmt = select(func.count(Membership.id)).where(Membership.member_id == member.id)
     mship_cnt = (await session.execute(mship_cnt_stmt)).scalar() or 0
     renewal_count = max(0, mship_cnt - 1)
+
+    # 5. Risk calculation
+    today = date.today()
+    is_at_risk = False
+    risk_reason = None
+    if row and row[0].status == "active" and row[0].end_date:
+        days_left = (row[0].end_date - today).days
+        if 0 <= days_left <= 7:
+            is_at_risk = True
+            risk_reason = f"Expiring in {days_left} day{'s' if days_left != 1 else ''}"
+
+    if not is_at_risk:
+        failed_pay_stmt = select(func.count(Payment.id)).where(
+            Payment.member_id == member.id,
+            Payment.status == "failed",
+        )
+        failed_count = (await session.execute(failed_pay_stmt)).scalar() or 0
+        if failed_count > 0:
+            is_at_risk = True
+            risk_reason = "Overdue failed payment"
 
     return MemberResponse(
         id=member.id,
@@ -73,12 +95,16 @@ async def _enrich_member_response(session: AsyncSession, member: Member) -> Memb
         trainer_name=trainer_name,
         status=member.status,
         membership_plan_name=plan_name,
+        membership_start_date=start_date,
         membership_end_date=end_date,
         membership_status=membership_status,
         lifetime_value=float(tot_amt or 0.0),
         total_payments=tot_cnt or 0,
+        average_payment=avg_payment,
         last_payment_date=max_date.date() if max_date else None,
         renewal_count=renewal_count,
+        is_at_risk=is_at_risk,
+        risk_reason=risk_reason,
         created_at=member.created_at,
     )
 

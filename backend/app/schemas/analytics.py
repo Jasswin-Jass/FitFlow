@@ -140,7 +140,9 @@ class TrainerPerformanceItem(BaseModel):
     name: str
     specialty: str
     status: str
-    rating: float
+    rating: Optional[float] = None
+    review_count: int = 0
+    experience_years: int = 0
     assigned_members: int
     max_capacity: int
     utilization_percent: float
@@ -152,6 +154,8 @@ class TrainerIntelligenceResponse(BaseModel):
     total_trainers: int
     active_trainers: int
     avg_members_per_trainer: float
+    avg_trainer_experience: Optional[float] = None
+    avg_trainer_rating: Optional[float] = None
     overall_utilization_percent: float
     trainers: List[TrainerPerformanceItem]
     specialization_distribution: List[Dict[str, Any]]

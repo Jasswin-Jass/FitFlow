@@ -10,6 +10,7 @@ import {
   CreditCard,
   UserCheck,
   Dumbbell,
+  Layers,
   LogOut,
   Building2,
 } from "lucide-react";
@@ -28,6 +29,7 @@ const navigation = [
     items: [
       { name: "Members", href: "/members", icon: Users },
       { name: "Memberships", href: "/memberships", icon: UserCheck },
+      { name: "Plans", href: "/membership-plans", icon: Layers },
       { name: "Payments", href: "/payments", icon: CreditCard },
       { name: "Trainers", href: "/trainers", icon: Dumbbell },
     ],

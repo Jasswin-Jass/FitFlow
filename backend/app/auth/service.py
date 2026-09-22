@@ -3,6 +3,7 @@ from sqlalchemy import select
 
 from app.models.gym import Gym
 from app.models.user import User
+from app.models.membership_plan import MembershipPlan
 from app.schemas.auth import GymRegisterRequest, UserLoginRequest, TokenResponse, UserResponse
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.core.exceptions import FitFlowException, AuthenticationFailedException
@@ -36,7 +37,37 @@ async def register_gym_and_owner(
     session.add(owner)
     await session.flush()
 
-    # 3. Initialize 0-state summary_metrics for new gym
+    # 3. Provision Default Membership Plans for New Gym
+    default_plans = [
+        MembershipPlan(
+            gym_id=gym.id,
+            name="Power Monthly",
+            description="Full facility and equipment access with monthly flexibility",
+            price=1800.0,
+            duration_days=30,
+            status="active",
+        ),
+        MembershipPlan(
+            gym_id=gym.id,
+            name="Power Quarterly",
+            description="Full facility access with quarterly savings",
+            price=4500.0,
+            duration_days=90,
+            status="active",
+        ),
+        MembershipPlan(
+            gym_id=gym.id,
+            name="Premium Annual",
+            description="VIP all-access annual plan with maximum savings",
+            price=15000.0,
+            duration_days=365,
+            status="active",
+        ),
+    ]
+    session.add_all(default_plans)
+    await session.flush()
+
+    # 4. Initialize 0-state summary_metrics for new gym
     await compute_and_save_daily_metrics(session, gym.id)
 
     await session.commit()

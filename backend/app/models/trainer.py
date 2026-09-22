@@ -9,6 +9,8 @@ if TYPE_CHECKING:
     from app.models.gym import Gym
     from app.models.user import User
     from app.models.member import Member
+    from app.models.trainer_assignment import TrainerMemberAssignment
+    from app.models.trainer_review import TrainerReview
 
 
 class Trainer(Base, UUIDMixin, TimestampMixin):
@@ -38,11 +40,30 @@ class Trainer(Base, UUIDMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)  # active, inactive
     max_client_capacity: Mapped[int] = mapped_column(Integer, default=20, nullable=False)
     rating: Mapped[float] = mapped_column(Float, default=5.0, nullable=False)
+    bio: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
 
     # Relationships
     gym: Mapped["Gym"] = relationship("Gym", back_populates="trainers")
     user: Mapped[Optional["User"]] = relationship("User")
     members: Mapped[List["Member"]] = relationship("Member", back_populates="trainer")
+    assignments: Mapped[List["TrainerMemberAssignment"]] = relationship("TrainerMemberAssignment", back_populates="trainer", cascade="all, delete-orphan")
+    reviews: Mapped[List["TrainerReview"]] = relationship("TrainerReview", back_populates="trainer", cascade="all, delete-orphan")
+
+    @property
+    def specialization(self) -> str:
+        return self.specialty
+
+    @specialization.setter
+    def specialization(self, value: str):
+        self.specialty = value
+
+    @property
+    def experience_years(self) -> int:
+        return self.years_of_experience
+
+    @experience_years.setter
+    def experience_years(self, value: int):
+        self.years_of_experience = value
 
     __table_args__ = (
         Index("ix_trainers_gym_specialty", "gym_id", "specialty"),

@@ -506,7 +506,7 @@ export default function AnalyticsPage() {
         {/* ========================================================= */}
         {activeTab === "trainers" && (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
                 <span className="text-xs text-zinc-400 uppercase tracking-wider">Active Trainers</span>
                 <p className="text-2xl font-bold font-mono text-white mt-1">{trainerIntel?.active_trainers ?? 0}</p>
@@ -523,11 +523,18 @@ export default function AnalyticsPage() {
                 <span className="text-[11px] text-zinc-400">Assigned per coach</span>
               </div>
               <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
-                <span className="text-xs text-zinc-400 uppercase tracking-wider">Roster Capacity</span>
-                <p className="text-2xl font-bold font-mono text-emerald-400 mt-1">
-                  {trainerIntel?.trainers.reduce((acc, t) => acc + t.max_capacity, 0) ?? 0}
+                <span className="text-xs text-zinc-400 uppercase tracking-wider">Average Rating</span>
+                <p className="text-2xl font-bold font-mono text-amber-400 mt-1">
+                  {trainerIntel?.avg_trainer_rating != null ? `${trainerIntel.avg_trainer_rating.toFixed(1)} ★` : "Not rated"}
                 </p>
-                <span className="text-[11px] text-zinc-400">Maximum personal slots</span>
+                <span className="text-[11px] text-zinc-400">Verified member reviews</span>
+              </div>
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4">
+                <span className="text-xs text-zinc-400 uppercase tracking-wider">Avg Experience</span>
+                <p className="text-2xl font-bold font-mono text-emerald-400 mt-1">
+                  {trainerIntel?.avg_trainer_experience != null ? `${trainerIntel.avg_trainer_experience.toFixed(1)} yrs` : "—"}
+                </p>
+                <span className="text-[11px] text-zinc-400">Coaching tenure</span>
               </div>
             </div>
 
@@ -560,7 +567,13 @@ export default function AnalyticsPage() {
                         <tr key={t.trainer_id} className="hover:bg-zinc-800/30">
                           <td className="py-2.5 font-semibold text-zinc-200">{t.name}</td>
                           <td className="py-2.5 text-zinc-400">{t.specialty}</td>
-                          <td className="py-2.5 font-mono text-amber-400 font-bold">{t.rating.toFixed(1)} ★</td>
+                          <td className="py-2.5 font-mono text-amber-400 font-bold">
+                            {t.rating != null ? (
+                              `${t.rating.toFixed(1)} ★`
+                            ) : (
+                              <span className="text-zinc-500 font-normal italic">Not rated yet</span>
+                            )}
+                          </td>
                           <td className="py-2.5 font-mono text-white font-bold">{t.assigned_members}</td>
                           <td className="py-2.5 font-mono text-zinc-400">{t.max_capacity}</td>
                           <td className="py-2.5">

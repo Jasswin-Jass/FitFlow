@@ -31,14 +31,62 @@ export function useCreatePlan() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { name: string; price: number; duration_days: number }) =>
-      api.post<MembershipPlan>("/membership-plans", data),
+    mutationFn: (data: {
+      name: string;
+      description?: string;
+      price: number;
+      duration_days: number;
+      status?: string;
+    }) => api.post<MembershipPlan>("/membership-plans", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["membership-plans"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
       toast.success("Plan created successfully!");
     },
     onError: (err: any) => {
       toast.error("Failed to create plan", {
+        description: err.detail || err.message,
+      });
+    },
+  });
+}
+
+export function useUpdatePlan() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<MembershipPlan>;
+    }) => api.patch<MembershipPlan>(`/membership-plans/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["membership-plans"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      toast.success("Plan updated successfully!");
+    },
+    onError: (err: any) => {
+      toast.error("Failed to update plan", {
+        description: err.detail || err.message,
+      });
+    },
+  });
+}
+
+export function useDeletePlan() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/membership-plans/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["membership-plans"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      toast.success("Plan deleted successfully");
+    },
+    onError: (err: any) => {
+      toast.error("Failed to delete plan", {
         description: err.detail || err.message,
       });
     },

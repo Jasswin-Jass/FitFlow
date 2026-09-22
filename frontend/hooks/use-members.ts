@@ -23,19 +23,23 @@ export function useMembers(params?: {
   });
 }
 
+export function useMember(memberId?: string | null) {
+  return useQuery({
+    queryKey: ["member", memberId],
+    queryFn: () => api.get<Member>(`/members/${memberId}`),
+    enabled: Boolean(memberId),
+  });
+}
+
 export function useCreateMember() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: {
-      name: string;
-      email: string;
-      phone: string;
-      status?: "active" | "inactive";
-    }) => api.post<Member>("/members", data),
+    mutationFn: (data: Partial<Member>) => api.post<Member>("/members", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
       toast.success("Member added successfully!");
     },
     onError: (err: any) => {
@@ -55,11 +59,13 @@ export function useUpdateMember() {
       data,
     }: {
       id: string;
-      data: { name?: string; email?: string; phone?: string; status?: string };
+      data: Partial<Member>;
     }) => api.patch<Member>(`/members/${id}`, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["members"] });
+      queryClient.invalidateQueries({ queryKey: ["member", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
       toast.success("Member updated successfully!");
     },
     onError: (err: any) => {
@@ -78,6 +84,7 @@ export function useDeleteMember() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
       toast.success("Member deleted successfully");
     },
     onError: (err: any) => {

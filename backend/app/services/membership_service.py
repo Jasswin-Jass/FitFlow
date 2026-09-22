@@ -46,8 +46,10 @@ async def list_plans(session: AsyncSession, gym_id: uuid.UUID) -> MembershipPlan
             id=p.id,
             gym_id=p.gym_id,
             name=p.name,
+            description=p.description,
             price=float(p.price),
             duration_days=p.duration_days,
+            status=p.status or "active",
             created_at=p.created_at,
         )
         for p in plans
@@ -68,8 +70,10 @@ async def get_plan(
         id=plan.id,
         gym_id=plan.gym_id,
         name=plan.name,
+        description=plan.description,
         price=float(plan.price),
         duration_days=plan.duration_days,
+        status=plan.status or "active",
         created_at=plan.created_at,
     )
 
@@ -80,8 +84,10 @@ async def create_plan(
     plan = MembershipPlan(
         gym_id=gym_id,
         name=data.name,
+        description=data.description,
         price=data.price,
         duration_days=data.duration_days,
+        status=data.status or "active",
     )
     session.add(plan)
     await session.commit()
@@ -91,8 +97,10 @@ async def create_plan(
         id=plan.id,
         gym_id=plan.gym_id,
         name=plan.name,
+        description=plan.description,
         price=float(plan.price),
         duration_days=plan.duration_days,
+        status=plan.status or "active",
         created_at=plan.created_at,
     )
 
@@ -108,10 +116,14 @@ async def update_plan(
 
     if data.name is not None:
         plan.name = data.name
+    if data.description is not None:
+        plan.description = data.description
     if data.price is not None:
         plan.price = data.price
     if data.duration_days is not None:
         plan.duration_days = data.duration_days
+    if data.status is not None:
+        plan.status = data.status
 
     await session.commit()
     await session.refresh(plan)
@@ -120,8 +132,10 @@ async def update_plan(
         id=plan.id,
         gym_id=plan.gym_id,
         name=plan.name,
+        description=plan.description,
         price=float(plan.price),
         duration_days=plan.duration_days,
+        status=plan.status or "active",
         created_at=plan.created_at,
     )
 

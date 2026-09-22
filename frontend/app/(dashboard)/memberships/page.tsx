@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   UserCheck,
   Plus,
@@ -304,28 +305,51 @@ export default function MembershipsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-300">Membership Plan</label>
-                <select
-                  required
-                  value={createForm.plan_id}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, plan_id: e.target.value })
-                  }
-                  className="w-full h-9 rounded-md border border-zinc-700/60 bg-zinc-900/80 px-3 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="">
-                    {isLoadingPlans
-                      ? "-- Loading plans... --"
-                      : availablePlans.length === 0
-                      ? "-- No plans available --"
-                      : "-- Choose Plan --"}
-                  </option>
-                  {availablePlans.map((plan: MembershipPlan) => (
-                    <option key={plan.id} value={plan.id}>
-                      {plan.name} — {formatINR(plan.price)} ({plan.duration_days} days)
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-zinc-300">Membership Plan</label>
+                  <Link
+                    href="/membership-plans"
+                    className="text-[11px] text-indigo-400 hover:text-indigo-300 transition-colors"
+                  >
+                    Manage Plans &rarr;
+                  </Link>
+                </div>
+                {isLoadingPlans ? (
+                  <div className="rounded-md border border-zinc-800 bg-zinc-950/40 p-2.5 text-xs text-zinc-500">
+                    Loading membership plans...
+                  </div>
+                ) : availablePlans.length === 0 ? (
+                  <div className="rounded-lg border border-amber-900/40 bg-amber-950/20 p-3 space-y-2">
+                    <p className="text-xs text-amber-200/90 font-medium">
+                      No membership plans have been created for this gym yet.
+                    </p>
+                    <Link href="/membership-plans">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 gap-1.5"
+                      >
+                        <Plus className="h-3 w-3" /> Create Membership Plan
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <select
+                    required
+                    value={createForm.plan_id}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, plan_id: e.target.value })
+                    }
+                    className="w-full h-9 rounded-md border border-zinc-700/60 bg-zinc-900/80 px-3 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  >
+                    <option value="">-- Choose Plan --</option>
+                    {availablePlans.map((plan: MembershipPlan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.name} — {formatINR(plan.price)} ({plan.duration_days} days)
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -363,7 +387,10 @@ export default function MembershipsPage() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createMembership.isPending}>
+                <Button
+                  type="submit"
+                  disabled={createMembership.isPending || availablePlans.length === 0}
+                >
                   {createMembership.isPending ? "Assigning..." : "Confirm Membership"}
                 </Button>
               </DialogFooter>
