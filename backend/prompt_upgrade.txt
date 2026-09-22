@@ -1,0 +1,1076 @@
+<USER_REQUEST>
+# FITFLOW — BUSINESS INTELLIGENCE & ANALYTICS UPGRADE
+
+You are working on the existing FitFlow project.
+
+FitFlow is a multi-tenant Gym Business Intelligence SaaS platform.
+
+The current application already has:
+
+- FastAPI backend
+- PostgreSQL/SQLite development database
+- SQLAlchemy
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- Recharts
+- Members
+- Trainers
+- Memberships
+- Membership Plans
+- Payments
+- Dashboard
+- KPI aggregation
+- Multi-tenant architecture
+- Authentication/RBAC
+- Summary metrics
+
+DO NOT rebuild the application from scratch.
+
+Extend the existing implementation carefully while preserving the current architecture.
+
+The objective is to transform the current basic dashboard into a significantly richer gym business intelligence platform.
+
+==================================================
+1. FIRST: AUDIT THE EXISTING IMPLEMENTATION
+==================================================
+
+Before making changes, inspect the existing:
+
+- SQLAlchemy models
+- database schema
+- migrations
+- seed.py
+- analytics services
+- summary_metrics implementation
+- membership plan APIs
+- membership APIs
+- member APIs
+- trainer APIs
+- payment APIs
+- dashboard APIs
+- frontend dashboard
+- frontend members page
+- frontend trainers page
+- frontend memberships page
+- frontend membership assignment modal
+- frontend charts
+
+Do not assume that the README is completely accurate.
+
+Verify the actual implementation and database behavior.
+
+Identify inconsistencies between:
+
+- database values
+- API responses
+- dashboard values
+- charts
+- historical metrics
+- membership plans
+- membership records
+
+Fix the underlying data/API problems rather than hiding them in the frontend.
+
+==================================================
+2. FIX MEMBERSHIP PLANS FIRST
+==================================================
+
+There is currently a problem in:
+
+/memberships
+
+The "Assign Membership" modal shows:
+
+"-- Choose Plan --"
+
+with no available membership plans.
+
+However, the dashboard already displays plans such as:
+
+"Power Monthly"
+
+Therefore:
+
+1. Verify that membership plans actually exist in the database.
+2. Verify the membership-plan GET endpoint.
+3. Verify gym/tenant filtering.
+4. Verify the frontend API request.
+5. Verify authentication/token handling.
+6. Verify that the returned plans are correctly mapped into the dropdown.
+7. Fix the issue at its actual source.
+
+The membership dropdown must dynamically show plans belonging to the currently authenticated gym.
+
+For example:
+
+- Power Monthly — ₹1,800 / 30 days
+- Power Quarterly — ₹4,500 / 90 days
+- Premium Annual — ₹15,000 / 365 days
+
+Do not hardcode these values in the frontend.
+
+The plans must come from the database.
+
+The selected plan must correctly create a membership and payment.
+
+==================================================
+3. FIX RENEWAL RATE
+==================================================
+
+The current dashboard shows:
+
+Renewal Rate: 0.0%
+
+while historical dashboard data contains non-zero renewal-rate values.
+
+This indicates a possible inconsistency between:
+
+- current KPI calculation
+- historical summary metrics
+- seeded data
+- membership status
+- membership end dates
+- renewal records
+
+Investigate and fix the actual calculation.
+
+Define Renewal Rate clearly:
+
+Renewal Rate =
+(number of memberships/members that renewed during the defined period)
+/
+(number of memberships that became eligible for renewal during the same period)
+× 100
+
+Avoid division-by-zero problems.
+
+If there are no eligible renewals:
+
+- return null or "N/A"
+- do NOT automatically display 0%
+
+because "no renewal population" is different from "0% of members renewed."
+
+The dashboard should clearly distinguish:
+
+- 0% renewal rate
+- unavailable/not enough data
+
+Also ensure the historical chart uses the SAME KPI definition as the current KPI.
+
+Do not fabricate historical values.
+
+==================================================
+4. FIX ALL DATA CONSISTENCY PROBLEMS
+==================================================
+
+Perform a complete consistency audit.
+
+The current dashboard appears to contain inconsistencies such as:
+
+- Active Members count
+- Plan Distribution active-member counts
+- MRR
+- historical MRR
+- renewal rate
+- historical renewal rate
+
+For example, if the database says there are 3 active members, the dashboard must not display 5 active members in another component unless there is a clearly defined reason.
+
+Create one consistent source of truth for each KPI.
+
+Every dashboard visualization must be derived from backend data.
+
+NO hardcoded:
+
+- member counts
+- revenue
+- renewal rates
+- percentages
+- chart values
+- demographic percentages
+- forecasts
+- recommendations
+
+==================================================
+5. EXPAND MEMBER DATA MODEL
+==================================================
+
+The current member information is too basic.
+
+Expand the member profile with useful business intelligence fields.
+
+Add fields such as:
+
+- first_name
+- last_name
+- email
+- phone
+- date_of_birth
+- age (preferably calculated from DOB rather than permanently stored)
+- gender
+- occupation
+- city/location
+- emergency contact
+- joining_date
+- preferred_training_time
+- fitness_goal
+- membership_status
+- acquisition_source
+- referral_source
+- membership_plan
+- membership_start_date
+- membership_end_date
+- lifetime_value
+- total_payments
+- last_payment_date
+- payment_status
+- renewal_count
+- cancellation_date if applicable
+
+Do not collect unnecessary sensitive information.
+
+Gender should be optional and should support:
+
+- Male
+- Female
+- Other
+- Prefer not to say
+
+Age should be calculated from date_of_birth.
+
+==================================================
+6. EXPAND TRAINER DATA
+==================================================
+
+The trainer page currently contains only basic details.
+
+Expand trainer profiles with useful operational data:
+
+- full name
+- email
+- phone
+- specialization
+- years of experience
+- certification
+- certification level
+- joining date
+- employment type
+- active/inactive status
+- assigned members
+- maximum client capacity
+- current client load
+- client utilization percentage
+- sessions completed
+- revenue generated
+- average client retention
+- average client tenure
+- rating
+- monthly performance
+- preferred training categories
+
+Do not invent trainer performance values.
+
+If performance data does not exist, either:
+
+1. derive it from existing operational records, or
+2. add the necessary structured records/data model and seed realistic data.
+
+==================================================
+7. EXPAND MEMBER ANALYTICS
+==================================================
+
+Add a dedicated Member Intelligence section.
+
+Include:
+
+A. Total Members
+
+B. Active Members
+
+C. Inactive Members
+
+D. New Members This Month
+
+E. Members Expiring Soon
+
+F. At-Risk Members
+
+G. Average Member Age
+
+H. Average Membership Duration
+
+I. Average Customer Lifetime Value
+
+J. Average Revenue Per Member
+
+K. Renewal Rate
+
+L. Churn/Cancellation Rate
+
+M. Member Growth Rate
+
+==================================================
+8. ACTIVE MEMBERS VS TOTAL MEMBERS
+==================================================
+
+Add a visualization showing:
+
+Active Members / Total Members
+
+Example:
+
+Active Members
+72 / 100
+
+68% Active
+
+Use a visually clear:
+
+- radial chart
+OR
+- progress visualization
+OR
+- donut chart
+
+Also show:
+
+- Active
+- Expired
+- Cancelled
+- Pending
+
+All values must come from the backend.
+
+==================================================
+9. GENDER ANALYTICS
+==================================================
+
+Add demographic analytics.
+
+Create a Male vs Female vs Other/Not Specified visualization.
+
+Example:
+
+Member Gender Distribution
+
+Male       58%
+Female     38%
+Other       2%
+Unknown     2%
+
+Use:
+
+- donut chart
+OR
+- stacked bar
+OR
+- horizontal bar chart
+
+Also calculate:
+
+- gender distribution
+- active members by gender
+- renewal rate by gender
+- average membership value by gender
+- churn rate by gender
+
+IMPORTANT:
+
+Do not make unsupported business claims.
+
+For example, do NOT automatically say:
+
+"Female members are a problem."
+
+Instead generate data-backed insights such as:
+
+"Female members represent 31% of the current member base."
+
+If historical data supports a trend:
+
+"Female membership increased 8% over the last 90 days."
+
+==================================================
+10. AGE CATEGORY ANALYTICS
+==================================================
+
+Calculate member age from date_of_birth.
+
+Create useful age groups:
+
+- Under 18
+- 18–24
+- 25–34
+- 35–44
+- 45–54
+- 55+
+
+Visualize:
+
+- total members by age group
+- active members by age group
+- revenue by age group
+- renewal rate by age group
+- churn rate by age group
+
+Use a bar chart or histogram.
+
+Also display:
+
+"Most represented age group"
+
+and
+
+"Fastest-growing age group"
+
+ONLY if the historical data is sufficient to calculate these values.
+
+==================================================
+11. MEMBER SEGMENTATION
+==================================================
+
+Create useful business segments.
+
+Examples:
+
+- New Members
+- Loyal Members
+- High-Value Members
+- At-Risk Members
+- Expiring Soon
+- Recently Inactive
+- Long-Term Members
+
+Define these segments using transparent rules.
+
+Example:
+
+High-Value Member:
+total lifetime payments > configurable threshold
+
+At-Risk:
+membership expires within 7 days
+OR
+recent unresolved failed payment
+
+Do not use arbitrary hidden scoring.
+
+Show the rule/definition somewhere in the UI if appropriate.
+
+==================================================
+12. REVENUE ANALYTICS
+==================================================
+
+Expand revenue intelligence.
+
+Add:
+
+- MRR
+- total revenue
+- revenue this month
+- revenue previous month
+- average revenue per member
+- average transaction value
+- revenue by membership plan
+- revenue by month
+- revenue by member segment
+- revenue by gender
+- revenue by age group
+
+Visualizations:
+
+1. Revenue trend
+2. Revenue by membership plan
+3. Revenue by demographic segment
+4. Monthly comparison
+
+All values must come from backend APIs.
+
+==================================================
+13. MEMBERSHIP ANALYTICS
+==================================================
+
+Add:
+
+- active memberships
+- expired memberships
+- memberships expiring within 7 days
+- memberships expiring within 30 days
+- new memberships
+- renewed memberships
+- cancelled memberships
+- renewal rate
+- churn rate
+- average membership duration
+
+Add a membership lifecycle visualization:
+
+New → Active → Expiring → Renewed / Churned
+
+==================================================
+14. TRAINER BUSINESS ANALYTICS
+==================================================
+
+Use the expanded trainer data to generate analytics.
+
+Show:
+
+- total trainers
+- active trainers
+- members per trainer
+- trainer utilization
+- client capacity
+- revenue generated per trainer
+- average client retention per trainer
+- trainer ratings
+- trainer specialization distribution
+
+Visualizations:
+
+- members per trainer
+- trainer utilization
+- trainer revenue contribution
+- specialization distribution
+
+Again, derive everything from actual records.
+
+==================================================
+15. BUSINESS FORECASTING
+==================================================
+
+Add a new section:
+
+"Business Outlook"
+
+This should NOT pretend to be AI unless a real predictive model exists.
+
+Implement transparent statistical forecasting using historical data.
+
+Possible forecasts:
+
+- projected member count
+- projected MRR
+- projected renewals
+- projected churn
+- projected membership demand
+
+Use historical trends.
+
+For example:
+
+Current Members: 100
+
+30-day historical growth:
++4%
+
+Projected next-period members:
+approximately 104
+
+Clearly label this as:
+
+"Trend-based projection"
+
+and display the methodology.
+
+If there is insufficient historical data:
+
+"Insufficient historical data for projection"
+
+Do NOT invent a forecast.
+
+==================================================
+16. DATA-DRIVEN BUSINESS INSIGHTS
+==================================================
+
+Create an "Actionable Insights" section.
+
+The system should automatically identify meaningful patterns from the available data.
+
+Examples:
+
+"Female members represent 34% of the current membership base."
+
+"Members aged 25–34 represent the largest member segment."
+
+"Memberships expiring within 7 days represent 8% of active memberships."
+
+"MRR increased 6.2% over the previous 30 days."
+
+"Quarterly plans account for 42% of recurring revenue."
+
+Recommendations must be generated from measurable data.
+
+For example:
+
+IF female membership share is low AND historical female membership growth is below other segments:
+
+"Female membership currently represents X% of members. Consider evaluating whether your current offerings, promotions, or trainer availability are meeting demand in this segment."
+
+IF a particular age group is growing:
+
+"The 25–34 age segment has grown X% over the last 90 days. Consider evaluating whether additional services or plans could support this growing segment."
+
+IF one age group has high churn:
+
+"The 35–44 segment has a higher churn rate than the gym average. Review renewal timing and member feedback for this segment."
+
+Do NOT produce generic recommendations unrelated to actual data.
+
+==================================================
+17. FORECAST + RECOMMENDATION DISTINCTION
+==================================================
+
+Clearly separate:
+
+DESCRIPTIVE ANALYTICS
+What is happening?
+
+DIAGNOSTIC ANALYTICS
+Why might it be happening based on available data?
+
+FORECASTING
+What may happen if the current trend continues?
+
+ACTIONABLE INSIGHTS
+What business area could the gym investigate?
+
+Do not present forecasts as facts.
+
+Use wording such as:
+
+- "Based on current trends..."
+- "The data indicates..."
+- "This segment has..."
+- "Projected..."
+- "Consider evaluating..."
+
+==================================================
+18. DASHBOARD REDESIGN
+==================================================
+
+Redesign the dashboard into a premium executive BI interface.
+
+Top KPI row:
+
+1. Total Members
+2. Active Members
+3. Active Member %
+4. MRR
+5. Renewal Rate
+6. At-Risk Members
+
+Second row:
+
+- Member Growth
+- Revenue Trend
+- Membership Status
+- Member Demographics
+
+Third row:
+
+- Gender Distribution
+- Age Distribution
+- Membership Plan Distribution
+- Trainer Utilization
+
+Fourth row:
+
+- Business Outlook
+- At-Risk Members
+- Actionable Insights
+
+Keep the dashboard clean.
+
+Do not overcrowd it.
+
+Use tabs or sections if necessary.
+
+==================================================
+19. NEW ANALYTICS PAGE
+==================================================
+
+Create:
+
+/analytics
+
+The dashboard should remain the executive summary.
+
+The Analytics page should contain deeper analysis.
+
+Sections:
+
+1. Member Intelligence
+2. Revenue Intelligence
+3. Membership Intelligence
+4. Trainer Intelligence
+5. Demographics
+6. Forecasts
+7. Actionable Insights
+
+Use Recharts for visualizations.
+
+Add:
+
+- tooltips
+- legends
+- date ranges
+- filters
+- responsive charts
+- loading skeletons
+- empty states
+- error states
+
+==================================================
+20. FILTERING
+==================================================
+
+Add useful filters:
+
+- date range
+- membership plan
+- member status
+- gender
+- age group
+- trainer
+- member segment
+
+Filtering must be performed through the backend where appropriate.
+
+Do not load massive datasets unnecessarily into the browser.
+
+==================================================
+21. BACKEND API DESIGN
+==================================================
+
+Add modular analytics endpoints.
+
+For example:
+
+GET /api/v1/analytics/overview
+
+GET /api/v1/analytics/members
+
+GET /api/v1/analytics/demographics
+
+GET /api/v1/analytics/revenue
+
+GET /api/v1/analytics/memberships
+
+GET /api/v1/analytics/trainers
+
+GET /api/v1/analytics/forecast
+
+GET /api/v1/analytics/insights
+
+Keep the existing modular monolith architecture.
+
+Do NOT create a separate microservice.
+
+==================================================
+22. DATABASE CHANGES
+==================================================
+
+Create proper Alembic migrations.
+
+Potential additions:
+
+members:
+- date_of_birth
+- gender
+- occupation
+- city
+- joining_date
+- preferred_training_time
+- fitness_goal
+- acquisition_source
+- referral_source
+
+trainers:
+- specialization
+- experience_years
+- certification
+- joining_date
+- employment_type
+- max_client_capacity
+- rating
+
+Add appropriate indexes.
+
+Every tenant-owned table MUST continue to contain:
+
+gym_id
+
+and PostgreSQL RLS must continue to enforce tenant isolation.
+
+==================================================
+23. SEED DATA
+==================================================
+
+Update the seed data substantially.
+
+Do NOT only create 3–10 members.
+
+Create realistic datasets for both demo gyms.
+
+For example:
+
+Gym A:
+50–100 members
+5–8 trainers
+multiple membership plans
+multiple months of payment history
+renewals
+expirations
+failed payments
+different genders
+different age groups
+different acquisition sources
+
+Gym B:
+30–70 members
+multiple trainers
+multiple plans
+historical payments
+different demographic distribution
+
+Make the data internally consistent.
+
+Do NOT create impossible combinations.
+
+For example:
+
+If a member has an active membership, its dates must actually contain today's date.
+
+If a membership is marked renewed, there must be corresponding renewal history.
+
+If MRR is displayed, it must be mathematically derivable from active memberships.
+
+If a chart displays historical revenue, there must be underlying historical payment/metric data.
+
+==================================================
+24. HISTORICAL DATA
+==================================================
+
+Create sufficient historical data for meaningful analytics.
+
+At least:
+
+90 days of historical operational/payment data where practical.
+
+This allows:
+
+- member growth
+- MRR trend
+- renewal trend
+- churn trend
+- demographic growth
+- age-segment trends
+- forecast calculations
+
+Do NOT generate fake chart values separately from the database.
+
+Historical charts must be calculated from actual seeded records or persisted summary metrics.
+
+==================================================
+25. KPI DEFINITIONS
+==================================================
+
+Document every KPI.
+
+At minimum:
+
+Active Members
+
+Total Members
+
+Active Member %
+
+MRR
+
+Revenue
+
+Renewal Rate
+
+Churn Rate
+
+Average Revenue Per Member
+
+Customer Lifetime Value
+
+At-Risk Members
+
+Member Growth
+
+Trainer Utilization
+
+Each KPI should have:
+
+- formula
+- data source
+- time window
+- interpretation
+
+==================================================
+26. DATA QUALITY
+==================================================
+
+Add validation so impossible values cannot enter the database.
+
+Examples:
+
+- invalid DOB
+- negative payment
+- membership end before start
+- negative plan price
+- invalid trainer capacity
+- duplicate member email within a tenant
+- invalid gender value
+
+==================================================
+27. MULTI-TENANCY MUST NOT BREAK
+==================================================
+
+This is extremely important.
+
+All new:
+
+- member data
+- demographic data
+- trainer data
+- analytics
+- forecasts
+- insights
+
+must be tenant-isolated.
+
+Gym A must NEVER see Gym B's:
+
+- members
+- trainers
+- payments
+- demographics
+- analytics
+- forecasts
+- recommendations
+
+Verify this with tests.
+
+==================================================
+28. TESTING
+==================================================
+
+Add/update tests for:
+
+- membership plan retrieval
+- membership assignment
+- renewal rate calculation
+- active member percentage
+- gender analytics
+- age-group analytics
+- revenue analytics
+- trainer analytics
+- forecast calculations
+- insight generation
+- tenant isolation
+- empty datasets
+- insufficient historical data
+- zero renewal denominator
+- database consistency
+
+Do not claim tests pass unless you actually run them.
+
+==================================================
+29. IMPORTANT: NO FABRICATED ANALYTICS
+==================================================
+
+This is critical.
+
+Never hardcode:
+
+- "58% male"
+- "42% female"
+- "25–34 is growing"
+- "female members are declining"
+- "MRR will increase 12%"
+- "focus on women"
+- "target 25–34"
+
+unless those conclusions are actually derived from the database.
+
+Every number shown on the dashboard must have a backend/data source.
+
+Every forecast must have a defined methodology.
+
+Every recommendation must have supporting metrics.
+
+==================================================
+30. FINAL USER EXPERIENCE
+==================================================
+
+The final FitFlow product should feel like:
+
+A professional gym business intelligence platform.
+
+Not:
+
+- a basic gym CRUD application
+- a simple member management app
+- a workout tracker
+- a collection of random charts
+
+The core experience should be:
+
+GYM OPERATIONS
+        ↓
+STRUCTURED DATA
+        ↓
+ANALYTICS ENGINE
+        ↓
+BUSINESS INTELLIGENCE
+        ↓
+TRENDS
+        ↓
+FORECASTS
+        ↓
+DATA-DRIVEN BUSINESS INSIGHTS
+
+The owner should be able to open FitFlow and understand:
+
+1. How many members do I have?
+2. How many are actually active?
+3. How much recurring revenue am I generating?
+4. Are members renewing?
+5. Who is at risk?
+6. What types of members do I have?
+7. Which age groups are growing?
+8. What is my gender distribution?
+9. Which plans generate the most revenue?
+10. How are my trainers performing?
+11. What trends are developing?
+12. What may happen if current trends continue?
+13. Which areas of the business deserve investigation?
+
+Do not sacrifice correctness for visual complexity.
+
+FIRST make the database, APIs, calculations, and data consistent.
+
+THEN build the visualizations.
+
+Finally run the complete application and verify the dashboard against the actual database.
+
+At the end, provide a concise implementation summary listing:
+
+- files changed
+- migrations created
+- APIs added
+- database fields added
+- analytics added
+- tests run
+- test results
+- any remaining limitations
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-09-22T22:58:48+05:30.
+</ADDITIONAL_METADATA>
