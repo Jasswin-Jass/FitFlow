@@ -12,6 +12,7 @@ from app.models.trainer_review import TrainerReview
 from app.models.membership import Membership
 from app.models.membership_plan import MembershipPlan
 from app.models.payment import Payment
+from app.models.payment_subscription import PaymentSubscription
 from app.models.summary_metrics import SummaryMetric
 from app.analytics.metrics import (
     calculate_active_members,
@@ -504,6 +505,43 @@ async def get_revenue_intelligence(
         for g, amt in (await session.execute(gender_stmt)).all()
     ]
 
+    # Pending payments
+    pending_stmt = select(func.count(Payment.id), func.sum(Payment.amount)).where(
+        Payment.gym_id == gym_id, Payment.status == "pending"
+    )
+    p_cnt, p_amt = (await session.execute(pending_stmt)).one()
+    pending_count = p_cnt or 0
+    pending_amount = float(p_amt or 0.0)
+
+    # Failed payments in last 30d
+    thirty_d_ago = datetime.combine(target_date - timedelta(days=30), datetime.min.time()).replace(tzinfo=timezone.utc)
+    failed_stmt = select(func.count(Payment.id), func.sum(Payment.amount)).where(
+        Payment.gym_id == gym_id,
+        Payment.status == "failed",
+        or_(Payment.paid_at >= thirty_d_ago, Payment.created_at >= thirty_d_ago),
+    )
+    f_cnt, f_amt = (await session.execute(failed_stmt)).one()
+    failed_count = f_cnt or 0
+    failed_amount = float(f_amt or 0.0)
+
+    # Auto-renewal adoption rate
+    sub_count_stmt = select(func.count(func.distinct(PaymentSubscription.member_id))).where(
+        PaymentSubscription.gym_id == gym_id,
+        PaymentSubscription.status == "active",
+    )
+    active_subs = (await session.execute(sub_count_stmt)).scalar() or 0
+    auto_renewal_rate = round((active_subs / active_count) * 100.0, 1) if active_count > 0 else 0.0
+
+    # Payment status distribution
+    dist_stmt = select(Payment.status, func.count(Payment.id), func.sum(Payment.amount)).where(
+        Payment.gym_id == gym_id
+    ).group_by(Payment.status)
+    dist_rows = (await session.execute(dist_stmt)).all()
+    status_distribution = [
+        {"status": "paid" if st == "success" else st, "count": cnt, "amount": float(amt or 0.0)}
+        for st, cnt, amt in dist_rows
+    ]
+
     return RevenueIntelligenceResponse(
         mrr=round(mrr, 2),
         total_revenue_all_time=round(total_rev, 2),
@@ -515,6 +553,12 @@ async def get_revenue_intelligence(
         monthly_trend=monthly_trend,
         revenue_by_gender=gender_rev,
         revenue_by_age_group=[],
+        pending_payments_count=pending_count,
+        pending_payments_amount=pending_amount,
+        failed_payments_count=failed_count,
+        failed_payments_amount=failed_amount,
+        auto_renewal_rate=auto_renewal_rate,
+        payment_status_distribution=status_distribution,
     )
 
 

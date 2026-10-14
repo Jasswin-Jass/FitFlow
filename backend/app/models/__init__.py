@@ -7,6 +7,9 @@ from app.models.trainer_review import TrainerReview
 from app.models.membership_plan import MembershipPlan
 from app.models.membership import Membership
 from app.models.payment import Payment
+from app.models.payment_subscription import PaymentSubscription
+from app.models.payment_webhook_event import PaymentWebhookEvent
+from app.models.payment_reminder import PaymentReminder
 from app.models.summary_metrics import SummaryMetric
 
 __all__ = [
@@ -19,5 +22,8 @@ __all__ = [
     "MembershipPlan",
     "Membership",
     "Payment",
+    "PaymentSubscription",
+    "PaymentWebhookEvent",
+    "PaymentReminder",
     "SummaryMetric",
 ]

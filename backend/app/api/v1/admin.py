@@ -6,7 +6,9 @@ from app.database.session import get_db
 from app.auth.dependencies import require_role
 from app.models.user import User
 from app.schemas.dashboard import DashboardSummaryResponse
+from app.schemas.payment import DuePaymentsProcessResponse
 from app.analytics.aggregation_service import compute_and_save_daily_metrics, get_dashboard_summary
+from app.services.payment_service import process_due_payments
 
 router = APIRouter(prefix="/admin", tags=["Admin & Aggregation"])
 
@@ -23,3 +25,15 @@ async def recompute_metrics(
     today = date.today()
     await compute_and_save_daily_metrics(db, gym_id=current_user.gym_id, metric_date=today)
     return await get_dashboard_summary(db, gym_id=current_user.gym_id)
+
+
+@router.post("/process-due-payments", response_model=DuePaymentsProcessResponse)
+async def trigger_due_payments(
+    current_user: User = Depends(require_role(["owner", "staff"])),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Processes all active recurring subscriptions whose next_billing_date <= today.
+    Idempotent: Running multiple times will never create duplicate charges for the same billing window.
+    """
+    return await process_due_payments(db, gym_id=current_user.gym_id)

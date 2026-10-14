@@ -20,6 +20,8 @@ from app.models.trainer_review import TrainerReview
 from app.models.membership_plan import MembershipPlan
 from app.models.membership import Membership
 from app.models.payment import Payment
+from app.models.payment_subscription import PaymentSubscription
+from app.models.payment_reminder import PaymentReminder
 from app.models.summary_metrics import SummaryMetric
 from app.analytics.metrics import (
     calculate_active_members,
@@ -286,11 +288,57 @@ async def seed_data():
                     member_id=m.id,
                     membership_id=mship.id,
                     amount=chosen_plan.price,
-                    paid_at=pmt_dt,
+                    currency="INR",
+                    payment_method=random.choice(["upi", "card", "netbanking"]),
                     status="paid",
+                    provider="demo",
+                    provider_payment_id=f"pay_demo_{uuid.uuid4().hex[:12]}",
+                    due_date=m_start,
+                    paid_at=pmt_dt,
+                    created_at=pmt_dt,
                 )
                 session.add(pmt)
                 all_payments_a.append(pmt)
+
+                # Add auto-renewal subscription for first 22 members
+                if idx < 22:
+                    sub_status = "active"
+                    if idx == 20:
+                        sub_status = "cancelled"
+                    elif idx == 21:
+                        sub_status = "past_due"
+                    interval = "monthly" if chosen_plan.duration_days <= 30 else ("quarterly" if chosen_plan.duration_days <= 90 else "annual")
+                    sub = PaymentSubscription(
+                        gym_id=gym_a.id,
+                        member_id=m.id,
+                        membership_id=mship.id,
+                        provider="demo",
+                        provider_subscription_id=f"sub_demo_{uuid.uuid4().hex[:12]}",
+                        amount=chosen_plan.price,
+                        currency="INR",
+                        billing_interval=interval,
+                        status=sub_status,
+                        start_date=mship.start_date,
+                        next_billing_date=mship.end_date,
+                    )
+                    session.add(sub)
+
+                # Add a few pending payments for upcoming renewals
+                if idx in (40, 41, 42, 43):
+                    pending_pmt = Payment(
+                        gym_id=gym_a.id,
+                        member_id=m.id,
+                        membership_id=mship.id,
+                        amount=chosen_plan.price,
+                        currency="INR",
+                        payment_method="upi",
+                        status="pending",
+                        provider="demo",
+                        provider_payment_id=f"pay_demo_{uuid.uuid4().hex[:12]}",
+                        due_date=today + timedelta(days=random.randint(1, 4)),
+                        created_at=datetime.now(timezone.utc) - timedelta(hours=random.randint(4, 36)),
+                    )
+                    session.add(pending_pmt)
 
                 # Add historical renewals for older members (idx < 20)
                 if idx < 20 and m.join_date < today - timedelta(days=90):
@@ -312,8 +360,14 @@ async def seed_data():
                         member_id=m.id,
                         membership_id=past_mship.id,
                         amount=chosen_plan.price,
-                        paid_at=past_pmt_dt,
+                        currency="INR",
+                        payment_method=random.choice(["upi", "card"]),
                         status="paid",
+                        provider="demo",
+                        provider_payment_id=f"pay_demo_{uuid.uuid4().hex[:12]}",
+                        due_date=past_start,
+                        paid_at=past_pmt_dt,
+                        created_at=past_pmt_dt,
                     ))
 
             elif idx < 56:
@@ -339,11 +393,30 @@ async def seed_data():
                     member_id=m.id,
                     membership_id=mship.id,
                     amount=chosen_plan.price,
-                    paid_at=pmt_dt,
+                    currency="INR",
+                    payment_method=random.choice(["upi", "card", "netbanking"]),
                     status="paid",
+                    provider="demo",
+                    provider_payment_id=f"pay_demo_{uuid.uuid4().hex[:12]}",
+                    due_date=m_start,
+                    paid_at=pmt_dt,
+                    created_at=pmt_dt,
                 )
                 session.add(pmt)
                 all_payments_a.append(pmt)
+
+                # Add automated reminder for at-risk member
+                session.add(PaymentReminder(
+                    gym_id=gym_a.id,
+                    member_id=m.id,
+                    payment_id=pmt.id,
+                    reminder_type="expiry_7d" if days_left > 2 else "expiry_2d",
+                    title="Membership Renewal Due Soon",
+                    channel=random.choice(["email", "sms"]),
+                    status="sent",
+                    created_at=datetime.now(timezone.utc) - timedelta(days=1),
+                    message=f"Hi {m.name}, your {chosen_plan.name} at FitCore Fitness expires in {days_left} days ({m_end}). Pay now or enable auto-renewal to keep working out uninterrupted.",
+                ))
 
             elif idx < 60:
                 # At-risk via unresolved failed payment
@@ -361,16 +434,41 @@ async def seed_data():
                 await session.flush()
 
                 failed_dt = datetime.combine(today - timedelta(days=random.randint(2, 10)), datetime.min.time()).replace(tzinfo=timezone.utc)
+                failure_reason = random.choice([
+                    "Bank server timeout during UPI debit",
+                    "Insufficient balance in linked bank account",
+                    "Card declined by issuing bank",
+                ])
                 pmt = Payment(
                     gym_id=gym_a.id,
                     member_id=m.id,
                     membership_id=mship.id,
                     amount=chosen_plan.price,
-                    paid_at=failed_dt,
+                    currency="INR",
+                    payment_method="upi",
                     status="failed",
+                    provider="demo",
+                    provider_payment_id=f"pay_demo_{uuid.uuid4().hex[:12]}",
+                    due_date=m_start,
+                    paid_at=None,
+                    created_at=failed_dt,
+                    failure_reason=failure_reason,
                 )
                 session.add(pmt)
                 all_payments_a.append(pmt)
+
+                # Failed payment reminder
+                session.add(PaymentReminder(
+                    gym_id=gym_a.id,
+                    member_id=m.id,
+                    payment_id=pmt.id,
+                    reminder_type="payment_failed",
+                    title="Payment Failed Alert",
+                    channel="sms",
+                    status="sent",
+                    created_at=failed_dt + timedelta(hours=1),
+                    message=f"Alert: Auto-debit of ₹{chosen_plan.price:,.0f} for your FitCore membership failed ({failure_reason}). Please retry payment via your member portal.",
+                ))
 
             else:
                 # Expired / Inactive members
@@ -396,8 +494,14 @@ async def seed_data():
                     member_id=m.id,
                     membership_id=mship.id,
                     amount=chosen_plan.price,
-                    paid_at=pmt_dt,
+                    currency="INR",
+                    payment_method=random.choice(["upi", "card", "cash"]),
                     status="paid",
+                    provider="demo",
+                    provider_payment_id=f"pay_demo_{uuid.uuid4().hex[:12]}",
+                    due_date=m_start,
+                    paid_at=pmt_dt,
+                    created_at=pmt_dt,
                 )
                 session.add(pmt)
                 all_payments_a.append(pmt)
@@ -602,14 +706,53 @@ async def seed_data():
                 )
                 session.add(mship)
                 await session.flush()
+                pmt_dt = datetime.combine(m_start, datetime.min.time()).replace(tzinfo=timezone.utc)
                 session.add(Payment(
                     gym_id=gym_b.id,
                     member_id=m.id,
                     membership_id=mship.id,
                     amount=chosen_plan.price,
-                    paid_at=datetime.combine(m_start, datetime.min.time()).replace(tzinfo=timezone.utc),
+                    currency="INR",
+                    payment_method=random.choice(["upi", "card", "netbanking"]),
                     status="paid",
+                    provider="demo",
+                    provider_payment_id=f"pay_demo_{uuid.uuid4().hex[:12]}",
+                    due_date=m_start,
+                    paid_at=pmt_dt,
+                    created_at=pmt_dt,
                 ))
+
+                # Auto renewal for first 12 members
+                if idx < 12:
+                    interval = "monthly" if chosen_plan.duration_days <= 30 else "quarterly"
+                    session.add(PaymentSubscription(
+                        gym_id=gym_b.id,
+                        member_id=m.id,
+                        membership_id=mship.id,
+                        provider="demo",
+                        provider_subscription_id=f"sub_demo_{uuid.uuid4().hex[:12]}",
+                        amount=chosen_plan.price,
+                        currency="INR",
+                        billing_interval=interval,
+                        status="active",
+                        start_date=mship.start_date,
+                        next_billing_date=mship.end_date,
+                    ))
+
+                if idx in (25, 26):
+                    session.add(Payment(
+                        gym_id=gym_b.id,
+                        member_id=m.id,
+                        membership_id=mship.id,
+                        amount=chosen_plan.price,
+                        currency="INR",
+                        payment_method="upi",
+                        status="pending",
+                        provider="demo",
+                        provider_payment_id=f"pay_demo_{uuid.uuid4().hex[:12]}",
+                        due_date=today + timedelta(days=random.randint(1, 3)),
+                        created_at=datetime.now(timezone.utc) - timedelta(hours=random.randint(2, 20)),
+                    ))
             elif idx < 37:
                 # Expiring in 4 days (At-risk)
                 m_end = today + timedelta(days=random.randint(2, 5))
@@ -624,13 +767,32 @@ async def seed_data():
                 )
                 session.add(mship)
                 await session.flush()
-                session.add(Payment(
+                pmt_dt = datetime.combine(m_start, datetime.min.time()).replace(tzinfo=timezone.utc)
+                pmt_b = Payment(
                     gym_id=gym_b.id,
                     member_id=m.id,
                     membership_id=mship.id,
                     amount=chosen_plan.price,
-                    paid_at=datetime.combine(m_start, datetime.min.time()).replace(tzinfo=timezone.utc),
+                    currency="INR",
+                    payment_method=random.choice(["upi", "card"]),
                     status="paid",
+                    provider="demo",
+                    provider_payment_id=f"pay_demo_{uuid.uuid4().hex[:12]}",
+                    due_date=m_start,
+                    paid_at=pmt_dt,
+                    created_at=pmt_dt,
+                )
+                session.add(pmt_b)
+                session.add(PaymentReminder(
+                    gym_id=gym_b.id,
+                    member_id=m.id,
+                    payment_id=pmt_b.id,
+                    reminder_type="expiry_2d",
+                    title="Membership Expiring Soon",
+                    channel="sms",
+                    status="sent",
+                    created_at=datetime.now(timezone.utc) - timedelta(days=1),
+                    message=f"Reminder: Your Urban Strength Club membership expires in {days_left} days. Pay now to retain continuous access.",
                 ))
             else:
                 # Inactive / expired
@@ -647,13 +809,20 @@ async def seed_data():
                 )
                 session.add(mship)
                 await session.flush()
+                pmt_dt = datetime.combine(m_start, datetime.min.time()).replace(tzinfo=timezone.utc)
                 session.add(Payment(
                     gym_id=gym_b.id,
                     member_id=m.id,
                     membership_id=mship.id,
                     amount=chosen_plan.price,
-                    paid_at=datetime.combine(m_start, datetime.min.time()).replace(tzinfo=timezone.utc),
+                    currency="INR",
+                    payment_method=random.choice(["upi", "card", "cash"]),
                     status="paid",
+                    provider="demo",
+                    provider_payment_id=f"pay_demo_{uuid.uuid4().hex[:12]}",
+                    due_date=m_start,
+                    paid_at=pmt_dt,
+                    created_at=pmt_dt,
                 ))
 
         await session.commit()

@@ -13,6 +13,7 @@ import {
   Layers,
   LogOut,
   Building2,
+  Zap,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -31,6 +32,7 @@ const navigation = [
       { name: "Memberships", href: "/memberships", icon: UserCheck },
       { name: "Plans", href: "/membership-plans", icon: Layers },
       { name: "Payments", href: "/payments", icon: CreditCard },
+      { name: "Automation", href: "/automation", icon: Zap },
       { name: "Trainers", href: "/trainers", icon: Dumbbell },
     ],
   },

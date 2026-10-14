@@ -107,6 +107,12 @@ class RevenueIntelligenceResponse(BaseModel):
     monthly_trend: List[MonthlyRevenueItem]
     revenue_by_gender: List[Dict[str, Any]]
     revenue_by_age_group: List[Dict[str, Any]]
+    pending_payments_count: int = 0
+    pending_payments_amount: float = 0.0
+    failed_payments_count: int = 0
+    failed_payments_amount: float = 0.0
+    auto_renewal_rate: float = 0.0
+    payment_status_distribution: List[Dict[str, Any]] = []
 
 
 # -------------------------------------------------------------

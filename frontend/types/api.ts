@@ -86,6 +86,7 @@ export interface Member {
   trainer_name?: string | null;
   status: "active" | "inactive";
   membership_plan_name?: string | null;
+  membership_id?: string | null;
   membership_start_date?: string | null;
   membership_end_date?: string | null;
   membership_status?: string | null;
@@ -153,8 +154,20 @@ export interface Payment {
   membership_id?: string | null;
   plan_name?: string | null;
   amount: number;
-  paid_at: string;
-  status: "paid" | "failed" | "refunded" | "success";
+  currency?: string;
+  payment_method?: string;
+  status: "paid" | "failed" | "pending" | "cancelled" | "refunded" | "success";
+  provider?: string;
+  provider_payment_id?: string | null;
+  payment_link_id?: string | null;
+  due_date?: string | null;
+  paid_at?: string | null;
+  failure_reason?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  has_auto_renewal?: boolean;
+  subscription_id?: string | null;
+  subscription_status?: string | null;
 }
 
 export interface PaymentListResponse {
@@ -163,6 +176,92 @@ export interface PaymentListResponse {
   page: number;
   size: number;
   pages: number;
+}
+
+export interface PaymentSubscription {
+  id: string;
+  gym_id: string;
+  member_id: string;
+  member_name?: string | null;
+  membership_id: string;
+  plan_name?: string | null;
+  provider: string;
+  provider_subscription_id?: string | null;
+  amount: number;
+  currency: string;
+  billing_interval: string;
+  status: "active" | "past_due" | "cancelled" | "paused";
+  start_date: string;
+  next_billing_date: string;
+  cancelled_at?: string | null;
+  created_at: string;
+}
+
+export interface PaymentSubscriptionListResponse {
+  items: PaymentSubscription[];
+  total: number;
+}
+
+export interface PaymentReminder {
+  id: string;
+  gym_id: string;
+  member_id: string;
+  member_name?: string | null;
+  payment_id?: string | null;
+  reminder_type: string;
+  title: string;
+  message: string;
+  channel: string;
+  status: string;
+  created_at: string;
+}
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  trigger: string;
+  action: string;
+  status: string;
+}
+
+export interface AutomationStatusResponse {
+  provider: string;
+  provider_mode: string;
+  recurring_enabled: boolean;
+  reminders_enabled: boolean;
+  active_subscriptions_count: number;
+  total_collected_monthly: number;
+  rules: AutomationRule[];
+}
+
+export interface DuePaymentsProcessResponse {
+  processed: number;
+  succeeded: number;
+  failed: number;
+  total_collected: number;
+  details: Array<{
+    subscription_id: string;
+    member_name: string;
+    amount: number;
+    status: string;
+    failure_reason?: string | null;
+  }>;
+}
+
+export interface CreatePaymentPayload {
+  member_id: string;
+  membership_id?: string;
+  amount: number;
+  currency?: string;
+  payment_method?: string;
+  due_date?: string;
+}
+
+export interface EnableAutoRenewalPayload {
+  member_id: string;
+  membership_id: string;
+  billing_interval?: string;
+  amount?: number;
 }
 
 export interface Trainer {

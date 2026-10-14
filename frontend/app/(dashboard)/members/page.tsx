@@ -22,6 +22,7 @@ import {
   Briefcase,
   Target,
   Sparkles,
+  Zap,
 } from "lucide-react";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
@@ -50,8 +51,17 @@ import {
   useDeleteMember,
 } from "@/hooks/use-members";
 import { useTrainers } from "@/hooks/use-trainers";
+import {
+  useMemberSubscription,
+  useEnableAutoRenewal,
+  useCancelAutoRenewal,
+  useSimulateRecurringSuccess,
+  useSimulateRecurringFailure,
+  useCreateSimulatedPayment,
+} from "@/hooks/use-payments";
+import { useMemberships } from "@/hooks/use-memberships";
 import { formatDate, formatINR } from "@/lib/utils";
-import { Member } from "@/types/api";
+import { Member, Membership } from "@/types/api";
 
 function computeAge(dobStr?: string | null): number | null {
   if (!dobStr) return null;
@@ -82,6 +92,144 @@ const initialFormState = {
   referral_source: "",
   status: "active" as "active" | "inactive",
 };
+
+function MemberSubscriptionSection({ member }: { member: Member }) {
+  const { data: subscription, isLoading } = useMemberSubscription(member.id);
+  const { data: membershipsData } = useMemberships();
+  const enableAutoRenewal = useEnableAutoRenewal();
+  const cancelAutoRenewal = useCancelAutoRenewal();
+  const simulateCharge = useSimulateRecurringSuccess();
+  const simulateFailure = useSimulateRecurringFailure();
+  const createPayment = useCreateSimulatedPayment();
+
+  const activeMembership = (membershipsData?.items || []).find(
+    (ms: Membership) => ms.member_id === member.id && ms.status === "active"
+  );
+  const effectiveMembershipId = member.membership_id || activeMembership?.id;
+
+  const handleEnable = async () => {
+    if (!effectiveMembershipId) {
+      alert("Member does not have an active membership to enable auto-renewal for.");
+      return;
+    }
+    await enableAutoRenewal.mutateAsync({
+      member_id: member.id,
+      membership_id: effectiveMembershipId,
+    });
+  };
+
+  const handlePayNow = async () => {
+    await createPayment.mutateAsync({
+      member_id: member.id,
+      membership_id: effectiveMembershipId || undefined,
+      amount: activeMembership?.plan_price || member.average_payment || 1800,
+      currency: "INR",
+      payment_method: "upi",
+    });
+  };
+
+  return (
+    <div className="rounded-xl border border-indigo-500/20 bg-indigo-950/20 p-4 space-y-3">
+      <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
+        <div className="flex items-center gap-2">
+          <Zap className="h-4 w-4 text-indigo-400" />
+          <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-300">
+            Payment & Recurring Mandate Controls
+          </h4>
+        </div>
+        {subscription && subscription.status === "active" ? (
+          <Badge variant="outline" className="border-emerald-500/40 text-emerald-400 bg-emerald-500/10 text-[10px]">
+            Active Auto-Renewal
+          </Badge>
+        ) : (
+          <Badge variant="secondary" className="text-[10px]">
+            Auto-Renewal Disabled
+          </Badge>
+        )}
+      </div>
+
+      {isLoading ? (
+        <p className="text-xs text-zinc-500">Checking mandate status...</p>
+      ) : subscription && subscription.status === "active" ? (
+        <div className="space-y-3 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] bg-zinc-900/60 p-2.5 rounded-lg border border-zinc-800">
+            <div>
+              <span className="text-zinc-500 block">Cadence</span>
+              <span className="text-zinc-200 capitalize font-medium">{subscription.billing_interval}</span>
+            </div>
+            <div>
+              <span className="text-zinc-500 block">Next Billing</span>
+              <span className="text-amber-400 font-mono font-medium">{formatDate(subscription.next_billing_date)}</span>
+            </div>
+            <div>
+              <span className="text-zinc-500 block">Renewal Amount</span>
+              <span className="text-zinc-100 font-mono font-semibold">{formatINR(subscription.amount)}</span>
+            </div>
+            <div>
+              <span className="text-zinc-500 block">Provider Token</span>
+              <span className="text-zinc-400 font-mono text-[10px] truncate block">{subscription.provider_subscription_id}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={simulateCharge.isPending}
+              onClick={() => simulateCharge.mutate(subscription.id)}
+              className="h-7 text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+            >
+              Simulate Renewal Charge
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={simulateFailure.isPending}
+              onClick={() => simulateFailure.mutate(subscription.id)}
+              className="h-7 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10"
+            >
+              Simulate Renewal Fail
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={cancelAutoRenewal.isPending}
+              onClick={() => cancelAutoRenewal.mutate(subscription.id)}
+              className="h-7 text-xs text-zinc-400 hover:text-red-400 ml-auto"
+            >
+              Cancel Auto Renewal
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-xs text-zinc-400">
+            Member does not currently have an active automatic renewal mandate. Memberships expire without recurring auto-debit unless enabled.
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              disabled={enableAutoRenewal.isPending || !effectiveMembershipId}
+              onClick={handleEnable}
+              className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700"
+            >
+              <Zap className="h-3.5 w-3.5 mr-1.5" /> Enable Auto-Renewal
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={createPayment.isPending}
+              onClick={handlePayNow}
+              className="h-8 text-xs border-zinc-700"
+            >
+              Pay Now (Create Payment)
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function MembersPage() {
   const [search, setSearch] = useState("");
@@ -1222,6 +1370,9 @@ export default function MembersPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Auto-Renewal & Payment Controls Section */}
+                <MemberSubscriptionSection member={detailMember} />
 
                 <DialogFooter className="pt-2">
                   <Button variant="outline" onClick={() => setDetailMember(null)}>

@@ -168,12 +168,13 @@ async def get_at_risk_members_data(
         .where(
             Payment.gym_id == gym_id,
             Payment.status == "failed",
-            Payment.paid_at >= thirty_days_ago_dt,
+            func.coalesce(Payment.created_at, Payment.paid_at) >= thirty_days_ago_dt,
         )
-        .order_by(Payment.paid_at.desc())
+        .order_by(func.coalesce(Payment.created_at, Payment.paid_at).desc())
     )
     failed_res = await session.execute(failed_stmt)
     for pmt, member in failed_res.all():
+        pmt_time = pmt.created_at or pmt.paid_at
         # Check if member made a subsequent successful payment after this failed one
         subsequent_paid_stmt = (
             select(Payment.id)
@@ -181,10 +182,13 @@ async def get_at_risk_members_data(
                 Payment.gym_id == gym_id,
                 Payment.member_id == member.id,
                 Payment.status == "paid",
-                Payment.paid_at > pmt.paid_at,
             )
-            .limit(1)
         )
+        if pmt_time:
+            subsequent_paid_stmt = subsequent_paid_stmt.where(
+                func.coalesce(Payment.paid_at, Payment.created_at) > pmt_time
+            )
+        subsequent_paid_stmt = subsequent_paid_stmt.limit(1)
         sub_paid_res = await session.execute(subsequent_paid_stmt)
         if sub_paid_res.scalar() is None:
             # No subsequent payment! This member is at risk
